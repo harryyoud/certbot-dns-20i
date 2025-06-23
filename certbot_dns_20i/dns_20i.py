@@ -1,4 +1,6 @@
 import json
+import os
+
 import zope.interface
 
 from certbot import errors
@@ -21,6 +23,7 @@ class Authenticator(dns_common.DNSAuthenticator):
     def __init__(self, *args, **kwargs):
         super(Authenticator, self).__init__(*args, **kwargs)
         self.dns_api = None
+        self.auth = None
         self._zone_id = None
 
     @classmethod
@@ -30,12 +33,17 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def _setup_credentials(self):
         if self.conf('credentials') is None:
-            raise errors.PluginError('No credentials given. Please configure credentials using'
-                                     '--dns-20i-credentials <file>')
+            if token := os.environ.get('TWENTYI_BEARER_TOKEN', None) is None:
+                raise errors.PluginError('No credentials given. Please configure credentials'
+                                         'using --dns-20i-credentials <file> or setting'
+                                         'TWENTYI_BEARER_TOKEN in your environment')
+            self.auth = {'bearer': token}
         else:
             self._configure_file('credentials', 'path to 20i credential JSON file')
             dns_common.validate_file_permissions(self.conf('credentials'))
-            self.dns_api = TwentyIDns(self.conf('credentials'))
+            with open(self.conf('credentials'), 'r') as f:
+                self.auth = json.load(f)
+        self.dns_api = TwentyIDns(self.auth)
 
     def _perform(self, domain, validation_name, validation):
         zone = self._get_zone_id_for_domain(domain)
@@ -83,11 +91,8 @@ class Authenticator(dns_common.DNSAuthenticator):
 
 
 class TwentyIDns(object):
-    def __init__(self, credentials_file):
-        with open(credentials_file, 'r') as f:
-            credentials = json.load(f)
-
-        self._api = TwentyIRestAPI(auth=credentials)
+    def __init__(self, auth):
+        self._api = TwentyIRestAPI(auth=auth)
 
     def add_txt_record(self, zone, record_name, record_content):
         """
