@@ -1,8 +1,6 @@
 import json
 import os
 
-import zope.interface
-
 from certbot import errors
 from certbot import interfaces
 from certbot.plugins import dns_common
@@ -10,8 +8,6 @@ from requests.exceptions import HTTPError
 from twentyi_api import TwentyIRestAPI, APIError
 
 
-@zope.interface.implementer(interfaces.IAuthenticator)
-@zope.interface.provider(interfaces.IPluginFactory)
 class Authenticator(dns_common.DNSAuthenticator):
     """DNS Authenticator for 20i
     This Authenticator uses the 20i API to fulfill a dns-01 challenge.
