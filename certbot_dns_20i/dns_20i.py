@@ -29,7 +29,8 @@ class Authenticator(dns_common.DNSAuthenticator):
 
     def _setup_credentials(self):
         if self.conf('credentials') is None:
-            if token := os.environ.get('TWENTYI_BEARER_TOKEN', None) is None:
+            token = os.environ.get('TWENTYI_BEARER_TOKEN', None)
+            if token is None:
                 raise errors.PluginError('No credentials given. Please configure credentials'
                                          'using --dns-20i-credentials <file> or setting'
                                          'TWENTYI_BEARER_TOKEN in your environment')
